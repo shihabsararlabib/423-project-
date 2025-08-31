@@ -10,7 +10,6 @@ def draw_simple_text(x, y, text, r, g, b):
     """Draw text using simple patterns - more readable"""
     glColor3f(r, g, b)
     
-    # Simple character patterns using small squares
     char_patterns = {
         'S': [(0,0),(0,1),(0,2),(1,2),(2,2),(2,1),(2,0),(1,0)],
         'C': [(0,0),(0,1),(0,2),(1,2),(2,2)],
@@ -85,11 +84,9 @@ def draw_number(x, y, number, r, g, b):
             glVertex2f(char_x + px * pixel_size, y + (py + 1) * pixel_size)
             glEnd()
 
-def draw_text(x, y, text, r, g, b):
+def draw_text(x, y, text, r=1.0, g=1.0, b=1.0):
     """Draw text using simple rectangles - fallback method"""
-    # Check if text contains mostly numbers
     if any(char.isdigit() for char in text) and ':' in text:
-        # This looks like a stat display, use both functions
         parts = text.split(':')
         if len(parts) == 2:
             draw_simple_text(x, y, parts[0] + ':', r, g, b)
@@ -97,7 +94,6 @@ def draw_text(x, y, text, r, g, b):
             draw_number(x + text_width, y, parts[1].strip(), r, g, b)
             return
     
-    # Use simple text for everything else
     draw_simple_text(x, y, text, r, g, b)
 
 def create_screen_shake(intensity=0.05, duration=200):
@@ -161,13 +157,17 @@ def load_high_scores():
             high_scores = []
             for line in f:
                 if line.strip():
-                    name, score, level, wave = line.strip().split(',')
-                    high_scores.append({
-                        'name': name,
-                        'score': int(score),
-                        'level': int(level),
-                        'wave': int(wave)
-                    })
+                    try:
+                        name, score, level, wave = line.strip().split(',')
+                        high_scores.append({
+                            'name': name,
+                            'score': int(float(score)),
+                            'level': int(float(level)),
+                            'wave': int(float(wave))
+                        })
+                    except (ValueError, IndexError) as e:
+                        print(f"Skipping invalid high score entry: {line.strip()} - Error: {e}")
+                        continue
     except FileNotFoundError:
         high_scores = []
 
@@ -197,13 +197,11 @@ def is_high_score(score):
     """Check if score qualifies for high score table"""
     if len(high_scores) < max_high_scores:
         return True
-    if not high_scores:  # Safety check for empty list
+    if not high_scores:
         return True
     return score > min(high_scores, key=lambda x: x['score'])['score']
 
 def draw_scoreboard():
-    """Draw the high score table - DISABLED"""
-    # This detailed scoreboard is disabled - using simple 2D one instead
     return
 
 
@@ -238,8 +236,8 @@ class ParticleEffect:
                 })
     
     def update(self, dt):
-        dt = dt / 1000.0  # Convert to seconds
-        self.life -= dt * 2  # Particles die over time
+        dt = dt / 1000.0
+        self.life -= dt * 2
         for particle in self.particles:
             particle['x'] += particle['vx'] * dt
             particle['y'] += particle['vy'] * dt
@@ -663,19 +661,15 @@ class Human:
         # Convert rotation to radians
         rad = math.radians(self.rotation)
         
-        # Calculate forward/backward movement
         forward_x = math.sin(rad) * dz * speed
         forward_z = math.cos(rad) * dz * speed
         
-        # Calculate left/right movement (perpendicular to forward)
         right_x = math.cos(rad) * dx * speed
         right_z = -math.sin(rad) * dx * speed
         
-        # Combine movements
         new_x = self.x + forward_x + right_x
         new_z = self.z + forward_z + right_z
         
-        # Check collision with walls
         grid_x = int(new_x)
         grid_z = int(new_z)
         if 0 <= grid_x < maze.width and 0 <= grid_z < maze.height and maze.grid[grid_z][grid_x] == 0:
@@ -1180,32 +1174,16 @@ def draw_power_up(x, y, z, type):
     glutSolidCube(0.4)
     glPopMatrix()
 
-def draw_text(x, y, text, r=1.0, g=1.0, b=1.0):
-    """Draw text using the same simple patterns approach"""
-    # Check if text contains mostly numbers
-    if any(char.isdigit() for char in text) and ':' in text:
-        # This looks like a stat display, use both functions
-        parts = text.split(':')
-        if len(parts) == 2:
-            draw_simple_text(x, y, parts[0] + ':', r, g, b)
-            text_width = len(parts[0] + ':') * 10
-            draw_number(x + text_width, y, parts[1].strip(), r, g, b)
-            return
-    
-    # Use simple text for everything else
-    draw_simple_text(x, y, text, r, g, b)
-
 def draw_maze():
     global screen_shake, screen_shake_duration
     
-    # Apply screen shake effect
     if screen_shake_duration > 0:
         glTranslatef(
             random.uniform(-screen_shake, screen_shake),
             random.uniform(-screen_shake, screen_shake),
             0
         )
-        screen_shake_duration -= 16  # Reduce by frame time
+        screen_shake_duration -= 16
         if screen_shake_duration <= 0:
             screen_shake = 0
     
@@ -1213,7 +1191,6 @@ def draw_maze():
     camera.apply(human)
     draw_space_environment()
     
-    # Draw floor
     glBegin(GL_QUADS)
     glColor3f(0.7, 0.7, 0.7)
     glVertex3f(0, 0, 0)
@@ -1222,12 +1199,10 @@ def draw_maze():
     glVertex3f(0, 0, maze.height)
     glEnd()
     
-    # Draw maze walls with enhanced lighting
     glBegin(GL_QUADS)
     for y in range(maze.height):
         for x in range(maze.width):
             if maze.grid[y][x] == 1:
-                # Vary wall color based on position for visual interest
                 base_color = 0.2 + 0.3 * math.sin((x + y) * 0.5)
                 glColor3f(0.0, 0.0, base_color)
                 
@@ -1311,21 +1286,18 @@ def draw_maze():
     
     # Draw UI elements
     draw_hud(human)
-    draw_permanent_scoreboard(human)  # Only the simple 2D scoreboard
+    draw_permanent_scoreboard(human)
     draw_minimap(maze, human)
     
     if not camera.top_down:
         draw_crosshair()
     
-    # Game over/won messages
     if human.game_over:
         draw_text(300, 400, "Game Over! Press 'r' to reset or Esc to quit.", 1.0, 0.0, 0.0)
         draw_text(350, 370, f"Final Score: {human.score}", 1.0, 0.0, 0.0)
         
-        # Check for high score
         if is_high_score(human.score):
             draw_text(280, 340, "NEW HIGH SCORE! Well done!", 1.0, 1.0, 0.0)
-            # Add to high scores automatically
             if not hasattr(human, 'score_saved'):
                 add_high_score(player_name, human.score, human.level, wave_number)
                 human.score_saved = True
@@ -1334,7 +1306,6 @@ def draw_maze():
         draw_text(300, 400, "Game Cleared! Press 'r' to reset or Esc to quit.", 0.0, 1.0, 0.0)
         draw_text(350, 370, f"Final Score: {human.score}", 0.0, 1.0, 0.0)
         
-        # Check for high score
         if is_high_score(human.score):
             draw_text(280, 340, "NEW HIGH SCORE! Excellent!", 1.0, 1.0, 0.0)
             if not hasattr(human, 'score_saved'):
@@ -1346,8 +1317,6 @@ def draw_maze():
 
 def keyboard(key, x, y):
     global maze, human, camera, time_counter, bullets_missed, combo_count, combo_multiplier, DOUBLE_BULLET, power_ups, last_mouse_x, mouse_deltas, kill_times, is_moving, show_scoreboard, is_sprinting
-    
-    print(f"Key pressed: {key} - Current keys: {keys_pressed}")  # Debug print
     
     if key == b'\x1b':
         sys.exit()
@@ -1378,25 +1347,23 @@ def keyboard(key, x, y):
         maze.mini_map_enabled = not maze.mini_map_enabled
         glutPostRedisplay()
     
-    # Fixed movement: W/S for forward/backward, A/D for left/right
     if not human.game_over and not human.game_won and not show_scoreboard:
-        if key == b'w':  # Forward
+        if key == b'w':
             human.move(0, 1, maze)
             is_moving = True
-        elif key == b's':  # Backward
+        elif key == b's':
             human.move(0, -1, maze)
             is_moving = True
-        elif key == b'a':  # Left - swap the values
+        elif key == b'a':
             human.move(1, 0, maze)
             is_moving = True
-        elif key == b'd':  # Right - swap the values
+        elif key == b'd':
             human.move(-1, 0, maze)
             is_moving = True
         glutPostRedisplay()
 
 def keyboard_up(key, x, y):
     global is_moving
-    # Simple movement stop
     if key in (b'w', b's', b'a', b'd'):
         is_moving = False
         glutPostRedisplay()
